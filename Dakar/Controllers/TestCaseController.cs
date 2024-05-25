@@ -17,13 +17,24 @@ namespace Dakar.Controllers
             _configuration = configuration;
         }
 
-        [HttpGet]
-        public IActionResult Get()
+        [HttpGet("{id}")]
+        public IActionResult Get(int id)
         {
             try
             {
                 List<TestCase> testCaseList = new List<TestCase>();
-                string query = @"Select TestCaseId, TestCaseName FROM dbo.TestCases;";
+                string query = @"
+SELECT
+TC.TestCaseId,
+TC.TestCaseName,
+PR.ProjectID
+FROM 
+    [dbo].[TestCases] TC
+JOIN
+    [dbo].[Projects] PR ON TC.ProjectID = PR.ProjectID
+WHERE 
+    TC.ProjectID = @ProjectID";
+
                 string sqlDataSource = _configuration.GetConnectionString("DakarAppCon");
 
                 using (SqlConnection myCon = new SqlConnection(sqlDataSource))
@@ -31,6 +42,8 @@ namespace Dakar.Controllers
                     myCon.Open();
                     using (SqlCommand myCommand = new SqlCommand(query, myCon))
                     {
+
+                        myCommand.Parameters.AddWithValue("@ProjectID", id);
                         using (SqlDataReader myReader = myCommand.ExecuteReader())
                         {
                             while (myReader.Read())
@@ -39,11 +52,13 @@ namespace Dakar.Controllers
                                 {
                                     TestCaseId = Convert.ToInt32(myReader["TestCaseId"]),
                                     TestCaseName = myReader["TestCaseName"].ToString(),
+                                    ProjectId = Convert.ToInt32(myReader["ProjectId"])
                                 };
                                 testCaseList.Add(testCase);
                             }
                         }
                     }
+                    myCon.Close();
                 }
 
                 return Ok(testCaseList);
@@ -54,6 +69,7 @@ namespace Dakar.Controllers
             }
         }
 
+        //To be modified
         [HttpPost]
         public IActionResult Post(TestCase test){
 
@@ -84,6 +100,7 @@ namespace Dakar.Controllers
 
         }
 
+        //To be modified
         [HttpPut]
         public IActionResult Put(TestCase test)
         {
