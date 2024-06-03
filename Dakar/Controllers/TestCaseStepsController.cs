@@ -77,6 +77,102 @@ WHERE
             }
         }
 
+        [HttpPost]
+        public IActionResult Post(TestCaseSteps step)
+        {
+
+            List<TestCaseSteps> testCaseStepsList = new List<TestCaseSteps>();
+            string query = @"INSERT INTO [dbo].[TestSteps] (ScenarioID, StepOrder, StepDescription, ExpectedResult) VALUES (@ScenarioID, @StepOrder, @StepDescription, @ExpectedResult)";
+            string sqlDataSource = _configuration.GetConnectionString("DakarAppCon");
+
+            int rowsAffected = 0;
+            using (SqlConnection myCon = new SqlConnection(sqlDataSource))
+            {
+                myCon.Open();
+                using (SqlCommand myCommand = new SqlCommand(query, myCon))
+                {
+                    myCommand.Parameters.AddWithValue("@ScenarioID", step.ScenarioID);
+                    myCommand.Parameters.AddWithValue("@StepOrder", step.StepOrder);
+                    myCommand.Parameters.AddWithValue("@StepDescription", step.StepDescription);
+                    myCommand.Parameters.AddWithValue("@ExpectedResult", step.ExpectedResult);
+
+                    rowsAffected = myCommand.ExecuteNonQuery();
+                }
+            }
+
+            if (rowsAffected > 0)
+            {
+                return Ok(new { message = "Test Case Step added successfully." });
+            }
+            else
+            {
+                return BadRequest(new { message = "Failed to add the Test Case Step." });
+            }
+
+        }
+
+        [HttpDelete("{id}/{stepID}")]
+        public IActionResult Delete(int id, int stepID)
+        {
+
+            string query = @"DELETE FROM [dbo].[TestSteps] WHERE [ScenarioID] = @ScenarioID AND [StepID] = @StepID";
+            string sqlDataSource = _configuration.GetConnectionString("DakarAppCon");
+
+            int rowsAffected = 0;
+            using (SqlConnection myCon = new SqlConnection(sqlDataSource))
+            {
+                myCon.Open();
+                using (SqlCommand myCommand = new SqlCommand(query, myCon))
+                {
+                    myCommand.Parameters.AddWithValue("@ScenarioID", id);
+                    myCommand.Parameters.AddWithValue("@StepID", stepID);
+
+                    rowsAffected = myCommand.ExecuteNonQuery();
+                }
+            }
+
+            if (rowsAffected > 0)
+            {
+                return Ok(new { message = "Test step removed successfully." });
+            }
+            else
+            {
+                return BadRequest(new { message = "Failed to remove the test step." });
+            }
+
+        }
+
+        [HttpPut]
+        public IActionResult Put(TestCaseSteps step)
+        {
+
+            string query = @"Update dbo.[TestSteps] SET StepDescription = @StepDescription, ExpectedResult = @ExpectedResult WHERE ScenarioID = @ScenarioID";
+            string sqlDataSource = _configuration.GetConnectionString("DakarAppCon");
+
+            int rowsAffected = 0;
+            using (SqlConnection myCon = new SqlConnection(sqlDataSource))
+            {
+                myCon.Open();
+                using (SqlCommand myCommand = new SqlCommand(query, myCon))
+                {
+                    myCommand.Parameters.AddWithValue("@StepDescription", step.StepDescription);
+                    myCommand.Parameters.AddWithValue("@ExpectedResult", step.ExpectedResult);
+                    myCommand.Parameters.AddWithValue("@ScenarioID", step.ScenarioID);
+
+                    rowsAffected = myCommand.ExecuteNonQuery();
+                }
+            }
+
+            if (rowsAffected > 0)
+            {
+                return Ok(new { message = "Test step updated successfully." });
+            }
+            else
+            {
+                return BadRequest(new { message = "Failed to update the Test step." });
+            }
+
+        }
 
     }
 }

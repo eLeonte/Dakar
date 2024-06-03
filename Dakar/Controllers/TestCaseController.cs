@@ -33,7 +33,9 @@ FROM
 JOIN
     [dbo].[Projects] PR ON TC.ProjectID = PR.ProjectID
 WHERE 
-    TC.ProjectID = @ProjectID";
+    TC.ProjectID = @ProjectID
+ORDER BY TC.TestCaseId
+";
 
                 string sqlDataSource = _configuration.GetConnectionString("DakarAppCon");
 
@@ -69,12 +71,11 @@ WHERE
             }
         }
 
-        //To be modified
         [HttpPost]
         public IActionResult Post(TestCase test){
 
             List<TestCase> testCaseList = new List<TestCase>();
-            string query = @"INSERT INTO dbo.TestCases (TestCaseName) Values (@TestCaseName)";
+            string query = @"INSERT INTO dbo.TestCases (TestCaseName, ProjectID) Values (@TestCaseName, @ProjectID)";
             string sqlDataSource = _configuration.GetConnectionString("DakarAppCon");
 
             int rowsAffected = 0;
@@ -84,6 +85,7 @@ WHERE
                 using (SqlCommand myCommand = new SqlCommand(query, myCon))
                 {
                     myCommand.Parameters.AddWithValue("@TestCaseName", test.TestCaseName);
+                    myCommand.Parameters.AddWithValue("@ProjectID", test.ProjectId);
 
                     rowsAffected = myCommand.ExecuteNonQuery();
                 }
@@ -100,7 +102,7 @@ WHERE
 
         }
 
-        //To be modified
+           // functioneaza asa, valideaza mai tarziu daca merge la fel
         [HttpPut]
         public IActionResult Put(TestCase test)
         {
@@ -136,22 +138,45 @@ WHERE
         public IActionResult Delete(int id)
         {
 
-            string query = @"Delete FROM dbo.TestCases WHERE TestCaseId = @TestCaseId";
+            string query1 = @"Delete FROM dbo.TestCases WHERE TestCaseId = @TestCaseId";
+            string query2 = @"Delete FROM dbo.TestSteps WHERE ScenarioID = @ScenarioID";
             string sqlDataSource = _configuration.GetConnectionString("DakarAppCon");
 
             int rowsAffected = 0;
             using (SqlConnection myCon = new SqlConnection(sqlDataSource))
             {
                 myCon.Open();
-                using (SqlCommand myCommand = new SqlCommand(query, myCon))
+                using (SqlTransaction transaction = myCon.BeginTransaction())
                 {
-                    myCommand.Parameters.AddWithValue("@TestCaseId", id);
+                    try
+                    {
 
-                    rowsAffected = myCommand.ExecuteNonQuery();
+                        using (SqlCommand myCommand = new SqlCommand(query1, myCon, transaction))
+                        {
+                            myCommand.Parameters.AddWithValue("@TestCaseId", id);
+
+                            rowsAffected = myCommand.ExecuteNonQuery();
+                        }
+
+                        using (SqlCommand myCommand = new SqlCommand(query2, myCon, transaction))
+                        {
+                            myCommand.Parameters.AddWithValue("@ScenarioID", id);
+
+                            rowsAffected = myCommand.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        // Rollback the transaction if command fails
+                        transaction.Rollback();
+                        return BadRequest(new { message = "Failed to add the Test Case Step or update related data.", error = ex.Message });
+                    }
                 }
             }
 
-            if (rowsAffected > 0)
+            if (rowsAffected >= 0)
             {
                 return Ok(new { message = "Test Case removed successfully." });
             }

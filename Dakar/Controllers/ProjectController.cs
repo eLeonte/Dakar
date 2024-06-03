@@ -117,31 +117,55 @@ namespace Dakar.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            string query = @"DELETE FROM dbo.Projects WHERE ProjectID = @ProjectID";
+
+            string query1 = @"DELETE FROM dbo.Projects WHERE ProjectID = @ProjectID";
+            string query2 = @"DELETE FROM dbo.TestCases WHERE ProjectID = @ProjectID";
             string sqlDataSource = _configuration.GetConnectionString("DakarAppCon");
 
             int rowsAffected = 0;
             using (SqlConnection myCon = new SqlConnection(sqlDataSource))
             {
                 myCon.Open();
-                using (SqlCommand myCommand = new SqlCommand(query, myCon))
+                using (SqlTransaction transaction = myCon.BeginTransaction())
                 {
-                    myCommand.Parameters.AddWithValue("@ProjectID", id);
-                    // Assuming Active is a boolean column, you might want to set it to true for new projects
-                    // myCommand.Parameters.AddWithValue("@Active", true);
+                    try
+                    {
 
-                    rowsAffected = myCommand.ExecuteNonQuery();
+                        using (SqlCommand myCommand = new SqlCommand(query1, myCon, transaction))
+                        {
+                            myCommand.Parameters.AddWithValue("@ProjectID", id);
+
+                            rowsAffected = myCommand.ExecuteNonQuery();
+                        }
+
+                        using (SqlCommand myCommand = new SqlCommand(query2, myCon, transaction))
+                        {
+                            myCommand.Parameters.AddWithValue("@ProjectID", id);
+
+                            rowsAffected = myCommand.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        // Rollback the transaction if command fails
+                        transaction.Rollback();
+                        return BadRequest(new { message = "Failed to delete the Project.", error = ex.Message });
+                    }
                 }
             }
 
-            if (rowsAffected > 0)
+            if (rowsAffected >= 0)
             {
-                return Ok(new { message = "Project removed successfully." });
+                return Ok(new { message = "Project and related test cases are deleted successfully." });
             }
             else
             {
-                return BadRequest(new { message = "Failed to remove the project." });
+                return BadRequest(new { message = "Failed to remove Project and related test." });
             }
+
         }
+
     }
 }
