@@ -146,7 +146,7 @@ WHERE
         public IActionResult Put(TestCaseSteps step)
         {
 
-            string query = @"Update dbo.[TestSteps] SET StepDescription = @StepDescription, ExpectedResult = @ExpectedResult WHERE ScenarioID = @ScenarioID";
+            string query = @"Update dbo.[TestSteps] SET StepDescription = @StepDescription, ExpectedResult = @ExpectedResult WHERE StepId = @StepID";
             string sqlDataSource = _configuration.GetConnectionString("DakarAppCon");
 
             int rowsAffected = 0;
@@ -157,7 +157,7 @@ WHERE
                 {
                     myCommand.Parameters.AddWithValue("@StepDescription", step.StepDescription);
                     myCommand.Parameters.AddWithValue("@ExpectedResult", step.ExpectedResult);
-                    myCommand.Parameters.AddWithValue("@ScenarioID", step.ScenarioID);
+                    myCommand.Parameters.AddWithValue("@StepID", step.StepID);
 
                     rowsAffected = myCommand.ExecuteNonQuery();
                 }
